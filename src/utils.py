@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
+import pandas_datareader as pdr
 import matplotlib.pyplot as plt
-from fbprophet import Prophet
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 from sklearn.model_selection import GridSearchCV
@@ -35,9 +35,13 @@ def preprocess_date(df):
     Returns:
     - pd.DataFrame: Processed data.
     """
+    # Extract date features
     df['Month'] = df['# Date'].dt.month
+    df['Year'] = df['# Date'].dt.year
     df['Day'] = df['# Date'].dt.day
     df['DayOfWeek'] = df['# Date'].dt.dayofweek
+    df['NumDaysInMonth'] = df['# Date'].dt.daysinmonth
+
     return df
 
 def split_data(df, split_ratio=0.75):
@@ -55,6 +59,47 @@ def split_data(df, split_ratio=0.75):
     train_size = int(len(df) * split_ratio)
     train, test = df[:train_size], df[train_size:]
     return train, test
+
+def add_fred_data(df, indicator, start_date, end_date, frequency='M'):
+    """
+    Add economic data from FRED to the DataFrame and adjust for the number of days in each month or quarter.
+
+    Parameters:
+    - df (pd.DataFrame): Input DataFrame.
+    - indicator (str): FRED indicator symbol (e.g., 'GDP', 'UNRATE').
+    - start_date (str): Start date in 'YYYY-MM-DD' format.
+    - end_date (str): End date in 'YYYY-MM-DD' format.
+    - frequency (str): Frequency of FRED data ('M' for monthly, 'Q' for quarterly).
+
+    Returns:
+    - pd.DataFrame: DataFrame with FRED data added and adjusted for the number of days in each month or quarter.
+    """
+    fred_data = pdr.get_data_fred(indicator, start=start_date, end=end_date)
+
+    if frequency == 'Q':
+        quarters_in_year = 4
+        dates = pd.date_range(start=start_date, end=end_date)
+        fred_df = pd.DataFrame(index=dates, columns=[indicator])
+        
+        for i in range(quarters_in_year):
+            quarter_mask = (dates.quarter == i + 1)
+            num_days_in_quarter = quarter_mask.sum()
+            fred_df.loc[quarter_mask, indicator] = fred_data.iloc[i][indicator] * num_days_in_quarter
+
+    elif frequency == 'M':
+        months_in_year = 12
+        dates = pd.date_range(start=start_date, end=end_date)
+        fred_df = pd.DataFrame(index=dates, columns=[indicator])
+
+        for i in range(months_in_year):
+            month_mask = (dates.month == i + 1)
+            num_days_in_month = month_mask.sum()
+            fred_df.loc[month_mask, indicator] = fred_data.iloc[i][indicator] * num_days_in_month
+
+    merged_df = pd.merge(df, fred_df, left_on='# Date', right_index=True, how='left')
+    merged_df[indicator] = merged_df[indicator].ffill()
+
+    return merged_df
 
 def scale_data(df, column_name):
     """
