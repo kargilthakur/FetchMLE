@@ -4,12 +4,12 @@ import pandas_datareader as pdr
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from sklearn.model_selection import GridSearchCV
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
-from sklearn.ensemble import RandomForestRegressor
 from prophet import Prophet
-from statsmodels.tsa.statespace.sarimax import SARIMAX
+from sklearn.model_selection import ParameterGrid
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import LSTM, Dense
 
 
 def load_data(file_path):
@@ -37,7 +37,7 @@ def preprocess_date(df):
     Returns:
     - pd.DataFrame: Processed data.
     """
-    # Extract date features
+
     df["Month"] = df["# Date"].dt.month
     df["Year"] = df["# Date"].dt.year
     df["Day"] = df["# Date"].dt.day
@@ -110,11 +110,9 @@ def split_data_by_date(df, target_column="# Date", test_start_date="2021-10-01")
     """
     df["# Date"] = pd.to_datetime(df["# Date"])
 
-    # Split data based on the date
     train = df[df["# Date"] < test_start_date]
     test = df[df["# Date"] >= test_start_date]
 
-    # Extract features and target
     X_train, y_train = (
         train.drop([target_column, "Receipt_Count"], axis=1),
         train["Receipt_Count"],
@@ -126,6 +124,27 @@ def split_data_by_date(df, target_column="# Date", test_start_date="2021-10-01")
 
     return X_train, X_test, y_train, y_test
 
+def split_data_prophet(df, target_column="# Date", test_start_date="2021-10-01"):
+    """
+    Split data into training and test sets based on the date.
+
+    Parameters:
+    - df (pd.DataFrame): Input data with a date column.
+    - target_column (str): Name of the target column.
+    - test_start_date (str): Start date for the test set.
+
+    Returns:
+    - pd.DataFrame: Training features.
+    - pd.DataFrame: Test features.
+    - pd.Series: Training target.
+    - pd.Series: Test target.
+    """
+    df["# Date"] = pd.to_datetime(df["# Date"])
+
+    train = df[df["# Date"] < test_start_date]
+    test = df[df["# Date"] >= test_start_date]
+
+    return train, test
 
 def scale_data(df, column_name):
     """
@@ -218,19 +237,12 @@ def get_predictions_2022(model):
     Returns:
     - pd.Series: Predictions for the year 2022.
     """
-    # Generate a date range for the year 2022
     date_range_2022 = pd.date_range(start="2022-01-01", end="2022-12-31", freq="D")
-
     predictions = []
 
     for date in date_range_2022:
-        # Extract date features using preprocess_date function
         date_features = preprocess_date(pd.DataFrame({"# Date": [date]}))
-
-        # Remove the '# Date' column and convert to a 1D array
         date_features = date_features.drop("# Date", axis=1).values.flatten()
-
-        # Predict using the model
         prediction = model.predict([date_features])[0]
         predictions.append(prediction)
 
@@ -266,30 +278,6 @@ def plot_actual_vs_predicted2022(
     plt.show()
 
 
-def train_sarima(X_train, y_train, order=(1, 1, 1), seasonal_order=(1, 1, 1, 12)):
-    """
-    Train a time series model using SARIMA.
-
-    Parameters:
-    - X_train (pd.DataFrame): Training features.
-    - y_train (pd.Series): Training target.
-    - order (tuple): Order of the autoregressive, differencing, and moving average components.
-    - seasonal_order (tuple): Order of the seasonal autoregressive, differencing, and moving average components.
-
-    Returns:
-    - SARIMAX: Trained SARIMA model.
-    """
-    model = SARIMAX(
-        y_train,
-        order=order,
-        seasonal_order=seasonal_order,
-        enforce_stationarity=False,
-        enforce_invertibility=False,
-    )
-    result = model.fit(disp=False)
-    return result
-
-
 def fit_prophet(df):
     """
     Fit a time series model using Prophet.
@@ -300,44 +288,36 @@ def fit_prophet(df):
     Returns:
     - pd.Series: Predictions for the test set.
     """
-    # Rename columns for Prophet
     df.rename(columns={"# Date": "ds", "Receipt_Count": "y"}, inplace=True)
 
-    # Initialize the Prophet model with US holidays
-    model = Prophet(yearly_seasonality=False)  # Disable yearly seasonality
-    model.add_regressor("Month", standardize=False)
-    model.add_seasonality(
-        name="weekly", period=7, fourier_order=3
-    )  # Add weekly seasonality
-    model.add_seasonality(
-        name="monthly", period=30.44, fourier_order=5
-    )  # Add monthly seasonality
-
-    # Fit the model
+    model = Prophet(yearly_seasonality=False)
+    model.add_seasonality(name="weekly", period=7, fourier_order=3)
+    model.add_country_holidays(country_name="US")
     model.fit(df)
 
     return model
-    # Create a dataframe with future dates for prediction
 
 
-def get_prophet_predictions(model, time_frame):
+def get_prophet_predictions(model, time_frame, freq ):
     """
-    Get predictions from a Prophet model for a specified time frame.
+    Get monthly aggregated predictions from a Prophet model for a specified time frame.
 
     Parameters:
     - model: Trained Prophet model.
     - time_frame (int): Number of periods into the future to predict.
 
     Returns:
-    - pd.Series: Predictions for the specified time frame.
+    - pd.Series: Monthly aggregated predictions for the specified time frame with the date as the index.
     """
-    future = model.make_future_dataframe(periods=time_frame)
-    future["Month"] = future["ds"].dt.month
+    future = model.make_future_dataframe(freq=freq,periods=time_frame)
 
     forecast = model.predict(future)
+    model.plot_components(forecast)
 
-    forecast["yhat"] = forecast["yhat"]
+    predictions_df = forecast.tail(time_frame)[["ds", "yhat"]].rename(
+        columns={"ds": "Date", "yhat": "Predicted"}
+    )
 
-    predictions = forecast.tail(time_frame)["yhat"].values
+    predictions_df.set_index("Date", inplace=True)
+    return predictions_df
 
-    return pd.Series(predictions)
