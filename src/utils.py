@@ -44,21 +44,6 @@ def preprocess_date(df):
 
     return df
 
-def split_data(df, split_ratio=0.75):
-    """
-    Split data into training and test sets.
-
-    Parameters:
-    - df (pd.DataFrame): Input data.
-    - split_ratio (float): Ratio for splitting data into training and test sets.
-
-    Returns:
-    - pd.DataFrame: Training set.
-    - pd.DataFrame: Test set.
-    """
-    train_size = int(len(df) * split_ratio)
-    train, test = df[:train_size], df[train_size:]
-    return train, test
 
 def add_fred_data(df, indicator, start_date, end_date, frequency='M'):
     """
@@ -101,6 +86,33 @@ def add_fred_data(df, indicator, start_date, end_date, frequency='M'):
 
     return merged_df
 
+def split_data_by_date(df, target_column='# Date', test_start_date='2021-10-01'):
+    """
+    Split data into training and test sets based on the date.
+
+    Parameters:
+    - df (pd.DataFrame): Input data with a date column.
+    - target_column (str): Name of the target column.
+    - test_start_date (str): Start date for the test set.
+
+    Returns:
+    - pd.DataFrame: Training features.
+    - pd.DataFrame: Test features.
+    - pd.Series: Training target.
+    - pd.Series: Test target.
+    """
+    df['# Date'] = pd.to_datetime(df['# Date'])
+
+    # Split data based on the date
+    train = df[df['# Date'] < test_start_date]
+    test = df[df['# Date'] >= test_start_date]
+
+    # Extract features and target
+    X_train, y_train = train.drop([target_column, 'Receipt_Count'], axis=1), train['Receipt_Count']
+    X_test, y_test = test.drop([target_column, 'Receipt_Count'], axis=1), test['Receipt_Count']
+
+    return X_train, X_test, y_train, y_test
+
 def scale_data(df, column_name):
     """
     Scale a specific column in the data using Min-Max scaling.
@@ -135,7 +147,9 @@ def evaluate_predictions(actual, predicted):
     mae = mean_absolute_error(actual, predicted)
     r2 = r2_score(actual, predicted)
 
-    return rmse, mae, r2
+    print(f'Root Mean Squared Error (RMSE): {rmse}')
+    print(f'Mean Absolute Error (MAE): {mae}')
+    print(f'R-squared (R2): {r2}')
 
 def plot_actual_vs_predicted(actual, predicted, title='Actual vs Predicted', xlabel='Date', ylabel='Value'):
     """
@@ -173,6 +187,53 @@ def train_linear_regression_ols(X_train, y_train):
     model = OLS(y_train, X_train_ols).fit()
     return model
 
+def get_predictions_2022(model):
+    """
+    Get predictions for the year 2022 using the specified model.
+
+    Parameters:
+    - model: Trained model.
+
+    Returns:
+    - pd.Series: Predictions for the year 2022.
+    """
+    # Generate a date range for the year 2022
+    date_range_2022 = pd.date_range(start='2022-01-01', end='2022-12-31', freq='D')
+
+    predictions = []
+
+    for date in date_range_2022:
+        # Extract date features using preprocess_date function
+        date_features = preprocess_date(pd.DataFrame({'# Date': [date]}))
+        
+        # Remove the '# Date' column and convert to a 1D array
+        date_features = date_features.drop('# Date', axis=1).values.flatten()
+
+        # Predict using the model
+        prediction = model.predict([date_features])[0]
+        predictions.append(prediction)
+
+    return pd.Series(predictions, index=date_range_2022)
+
+def plot_actual_vs_predicted2022(actual_2021, predicted_2022, title='Actual vs Predicted', xlabel='Date', ylabel='Value'):
+    """
+    Plot actual values of 2021 and predicted values of 2022 on a timeline.
+
+    Parameters:
+    - actual_2021 (pd.Series): Actual values for the year 2021.
+    - predicted_2022 (pd.Series): Predicted values for the year 2022.
+    - title (str): Title for the plot.
+    - xlabel (str): Label for the x-axis.
+    - ylabel (str): Label for the y-axis.
+    """
+    plt.figure(figsize=(12, 6))
+    plt.plot(actual_2021.index, actual_2021.values, label='Actual 2021', marker='o')
+    plt.plot(predicted_2022.index, predicted_2022.values, label='Predicted 2022', marker='o')
+    plt.title(title)
+    plt.xlabel(xlabel)
+    plt.ylabel(ylabel)
+    plt.legend()
+    plt.show()
 
 def train_random_forest_with_hyperparameter_tuning(X_train, y_train, param_grid, cv=3):
     """
