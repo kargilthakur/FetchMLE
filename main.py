@@ -8,7 +8,7 @@ def main():
     config = ConfigParser()
     config.read("config/config.ini")
     data = config["models"]
-    model_choice = "Prophet"
+    model_choice = "LSTM"
     df = load_data("data/data_daily.csv")
 
     if model_choice == "Linear":
@@ -53,7 +53,24 @@ def main():
         )
 
     elif model_choice == "LSTM":
-        pass
+        df = preprocess_date(df)
+        X_train, X_test, y_train, y_test = split_data_by_date(df)
+        X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, scaler_X, scaler_y = scale_data(X_train, X_test, y_train, y_test)
+        X_train_reshaped, X_test_reshaped = reshape_data(X_train_scaled, X_test_scaled)
+
+        param_grid = {
+            'learning_rate': [0.001, 0.01, 0.1],
+            'units': [50, 100, 150],
+            'dropout_rate': [0.2, 0.3, 0.4]
+        }
+
+        grid_search_result = grid_search_lstm(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_scaled, param_grid)
+        best_params = grid_search_result['best_params']
+        final_model = train_lstm_model(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_scaled, best_params, epochs=100, batch_size=32)
+        monthly_predictions_2022 = get_lstm_predictions_2022(final_model, scaler_X, scaler_y)
+        actual = load_data("data/data_daily.csv")
+        actual = actual.set_index("# Date").squeeze()
+        plot_actual_vs_predicted2022(actual, monthly_predictions_2022)
 
 
 if __name__ == "__main__":
