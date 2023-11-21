@@ -20,11 +20,11 @@ model = st.selectbox(
 
 # Load the corresponding CSV file
 if model == 'Linear Regression':
-    csv_path = '/Users/kargilthakur/FetchMLE/data/lr_predictions_20231121154304.csv'
+    csv_path = 'data/lr_predictions.csv'
 elif model == 'LSTM':
-    csv_path = '/Users/kargilthakur/FetchMLE/data/lstm_predictions_20231121160726.csv'
+    csv_path = 'data/lstm_predictions.csv'
 else:
-    csv_path = '/Users/kargilthakur/FetchMLE/data/lstm_predictions_20231121160726.csv'
+    csv_path = 'data/lstm_predictions.csv'
 
 df = pd.read_csv(csv_path, parse_dates=True, index_col=0)
 
