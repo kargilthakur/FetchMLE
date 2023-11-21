@@ -10,7 +10,7 @@ from prophet import Prophet
 from sklearn.model_selection import ParameterGrid
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
-
+from tensorflow.keras.optimizers import Adam
 
 def load_data(file_path):
     """
@@ -319,8 +319,8 @@ def scale_data(X_train, X_test, y_train, y_test):
     X_train_scaled = scaler_X.fit_transform(X_train)
     X_test_scaled = scaler_X.transform(X_test)
 
-    y_train_scaled = scaler_y.fit_transform(y_train.reshape(-1, 1)).flatten()
-    y_test_scaled = scaler_y.fit_transform(y_test.reshape(-1, 1)).flatten()
+    y_train_scaled = scaler_y.fit_transform(y_train.values.reshape(-1, 1)).flatten()
+    y_test_scaled = scaler_y.fit_transform(y_test.values.reshape(-1, 1)).flatten()
 
     return X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, scaler_X, scaler_y
 
@@ -339,7 +339,7 @@ def reshape_data(X_train_scaled, X_test_scaled):
     X_test_reshaped = X_test_scaled.reshape((X_test_scaled.shape[0], X_test_scaled.shape[1], 1))
     return X_train_reshaped, X_test_reshaped
 
-def create_lstm_model(input_shape=(None, 1)):
+def create_lstm_model(units, learning_rate, input_shape=(None, 1)):
     """
     Create a basic LSTM model.
 
@@ -350,9 +350,9 @@ def create_lstm_model(input_shape=(None, 1)):
     - Sequential: Basic LSTM model.
     """
     model = Sequential()
-    model.add(LSTM(100, input_shape=input_shape))
+    model.add(LSTM(units, input_shape=input_shape))
     model.add(Dense(1))
-    optimizer = Adam(learning_rate=0.001)  
+    optimizer = Adam(learning_rate=learning_rate)  
     model.compile(optimizer=optimizer, loss='mean_squared_error')
     return model
 
@@ -440,11 +440,13 @@ def get_lstm_predictions_2022(final_model, scaler_X, scaler_y):
     - pd.DataFrame: Monthly predictions for 2022 with the date and prediction columns.
     """
     future_dates_2022 = pd.date_range(start='2022-01-01', end='2022-12-31', freq='M')
-    
+
     future_data_2022 = pd.DataFrame({
         'Month': future_dates_2022.month,
+        'Year' : future_dates_2022.year,
         'Day': future_dates_2022.day,
-        'DayOfWeek': future_dates_2022.dayofweek
+        'DayOfWeek': future_dates_2022.dayofweek,
+        'NumDaysInMonth' : future_dates_2022.daysinmonth
     })
     
     future_data_2022_scaled = scaler_X.transform(future_data_2022)
@@ -457,10 +459,5 @@ def get_lstm_predictions_2022(final_model, scaler_X, scaler_y):
     
     lstm_predictions_2022 = scaler_y.inverse_transform(lstm_predictions_2022_scaled).flatten()
     
-    monthly_predictions_2022 = pd.DataFrame({
-        'Date': future_dates_2022,
-        'Prediction': lstm_predictions_2022
-    })
-
-    return monthly_predictions_2022
+    return pd.Series(lstm_predictions_2022, index=future_dates_2022)
 

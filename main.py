@@ -27,7 +27,7 @@ def main():
         plot_actual_vs_predicted2022(actual, predictions)
 
         predictions.to_csv(
-            f'data/predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
+            f'data/lr_predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
             header=True,
         )
 
@@ -48,7 +48,7 @@ def main():
         plot_actual_vs_predicted2022(actual, predictions2022[3:])
 
         predictions.to_csv(
-            f'data/predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
+            f'data/prophet_predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
             header=True,
         )
 
@@ -67,11 +67,17 @@ def main():
         grid_search_result = grid_search_lstm(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_scaled, param_grid)
         best_params = grid_search_result['best_params']
         final_model = train_lstm_model(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_scaled, best_params, epochs=100, batch_size=32)
+        with open("models/LSTM.pkl", "wb") as file:
+            pickle.dump(model, file)
+
         monthly_predictions_2022 = get_lstm_predictions_2022(final_model, scaler_X, scaler_y)
         actual = load_data("data/data_daily.csv")
         actual = actual.set_index("# Date").squeeze()
         plot_actual_vs_predicted2022(actual, monthly_predictions_2022)
-
+        predictions.to_csv(
+            f'data/lstm_predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
+            header=True,
+        )
 
 if __name__ == "__main__":
     main()
