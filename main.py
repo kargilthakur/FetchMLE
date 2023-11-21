@@ -1,13 +1,9 @@
 from src.utils import *
-from configparser import ConfigParser
 import pickle
 from datetime import datetime
 
 
 def main():
-    config = ConfigParser()
-    config.read("config/config.ini")
-    data = config["models"]
     model_choice = "LSTM"
     df = load_data("data/data_daily.csv")
 
@@ -24,7 +20,7 @@ def main():
         predictions = get_predictions_2022(model)
         actual = load_data("data/data_daily.csv")
         actual = actual.set_index("# Date").squeeze()
-        plot_actual_vs_predicted2022(actual, predictions)
+        # plot_actual_vs_predicted2022(actual, predictions)
 
         predictions.to_csv(
             f'data/lr_predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
@@ -41,11 +37,10 @@ def main():
         with open("models/Prophet.pkl", "wb") as file:
             pickle.dump(model, file)
 
-        predictions2022 = get_prophet_predictions(model, 15, "M")
+        predictions2022 = get_prophet_predictions(model, 457, "D")
         actual = load_data("data/data_daily.csv")
         actual = actual.set_index("# Date").squeeze()
-        actual = actual.resample("M").last()
-        plot_actual_vs_predicted2022(actual, predictions2022[3:])
+        # plot_actual_vs_predicted2022(actual, predictions2022[92:])
 
         predictions.to_csv(
             f'data/prophet_predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
@@ -68,13 +63,15 @@ def main():
         best_params = grid_search_result['best_params']
         final_model = train_lstm_model(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_scaled, best_params, epochs=100, batch_size=32)
         with open("models/LSTM.pkl", "wb") as file:
-            pickle.dump(model, file)
+            pickle.dump(final_model, file)
 
+        predictions = get_lstm_predictions(final_model, X_test_reshaped, scaler_y)
+        evaluate_predictions(y_test, predictions)
         monthly_predictions_2022 = get_lstm_predictions_2022(final_model, scaler_X, scaler_y)
         actual = load_data("data/data_daily.csv")
         actual = actual.set_index("# Date").squeeze()
-        plot_actual_vs_predicted2022(actual, monthly_predictions_2022)
-        predictions.to_csv(
+        # plot_actual_vs_predicted2022(actual, monthly_predictions_2022)
+        monthly_predictions_2022.to_csv(
             f'data/lstm_predictions_{datetime.now().strftime("%Y%m%d%H%M%S")}.csv',
             header=True,
         )

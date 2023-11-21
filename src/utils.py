@@ -3,7 +3,7 @@ import numpy as np
 import pandas_datareader as pdr
 import matplotlib.pyplot as plt
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from statsmodels.regression.linear_model import OLS
 from statsmodels.tools import add_constant
 from prophet import Prophet
@@ -161,11 +161,9 @@ def evaluate_predictions(actual, predicted):
     """
     rmse = np.sqrt(mean_squared_error(actual, predicted))
     mae = mean_absolute_error(actual, predicted)
-    r2 = r2_score(actual, predicted)
 
     print(f"Root Mean Squared Error (RMSE): {rmse}")
     print(f"Mean Absolute Error (MAE): {mae}")
-    print(f"R-squared (R2): {r2}")
 
 
 def plot_actual_vs_predicted(
@@ -292,7 +290,6 @@ def get_prophet_predictions(model, time_frame, freq ):
     future = model.make_future_dataframe(freq=freq,periods=time_frame)
 
     forecast = model.predict(future)
-    model.plot_components(forecast)
 
     predictions_df = forecast.tail(time_frame)[["ds", "yhat"]].rename(
         columns={"ds": "Date", "yhat": "Predicted"}
@@ -439,7 +436,7 @@ def get_lstm_predictions_2022(final_model, scaler_X, scaler_y):
     Returns:
     - pd.DataFrame: Monthly predictions for 2022 with the date and prediction columns.
     """
-    future_dates_2022 = pd.date_range(start='2022-01-01', end='2022-12-31', freq='M')
+    future_dates_2022 = pd.date_range(start='2022-01-01', end='2022-12-31', freq='D')
 
     future_data_2022 = pd.DataFrame({
         'Month': future_dates_2022.month,
