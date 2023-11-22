@@ -15,6 +15,9 @@ https://huggingface.co/spaces/kargil8320/MLE
 Note that due to resource limitations on the free Hugging Face platform, the deployed app pauses every 48 hours. If you encounter any issues, consider restarting it.
 
 App screenshots - 
+![Receipt Count Table](ss1.png)
+![Receipt Count Plot](ss2.png)
+
 
 
 For a more robust inference experience, you can pull the Docker image from the following repository:
