@@ -12,6 +12,7 @@ from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense
 from tensorflow.keras.optimizers import Adam
 
+
 def load_data(file_path):
     """
     Load data from a CSV file and convert date to datetime format.
@@ -124,6 +125,7 @@ def split_data_by_date(df, target_column="# Date", test_start_date="2021-10-01")
 
     return X_train, X_test, y_train, y_test
 
+
 def split_data_prophet(df, target_column="# Date", test_start_date="2021-10-01"):
     """
     Split data into training and test sets based on the date.
@@ -145,6 +147,7 @@ def split_data_prophet(df, target_column="# Date", test_start_date="2021-10-01")
     test = df[df["# Date"] >= test_start_date]
 
     return train, test
+
 
 def evaluate_predictions(actual, predicted):
     """
@@ -276,7 +279,7 @@ def fit_prophet(df):
     return model
 
 
-def get_prophet_predictions(model, time_frame, freq ):
+def get_prophet_predictions(model, time_frame, freq):
     """
     Get monthly aggregated predictions from a Prophet model for a specified time frame.
 
@@ -287,7 +290,7 @@ def get_prophet_predictions(model, time_frame, freq ):
     Returns:
     - pd.Series: Monthly aggregated predictions for the specified time frame with the date as the index.
     """
-    future = model.make_future_dataframe(freq=freq,periods=time_frame)
+    future = model.make_future_dataframe(freq=freq, periods=time_frame)
 
     forecast = model.predict(future)
 
@@ -297,6 +300,7 @@ def get_prophet_predictions(model, time_frame, freq ):
 
     predictions_df.set_index("Date", inplace=True)
     return predictions_df
+
 
 def scale_data(X_train, X_test, y_train, y_test):
     """
@@ -319,7 +323,15 @@ def scale_data(X_train, X_test, y_train, y_test):
     y_train_scaled = scaler_y.fit_transform(y_train.values.reshape(-1, 1)).flatten()
     y_test_scaled = scaler_y.fit_transform(y_test.values.reshape(-1, 1)).flatten()
 
-    return X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, scaler_X, scaler_y
+    return (
+        X_train_scaled,
+        X_test_scaled,
+        y_train_scaled,
+        y_test_scaled,
+        scaler_X,
+        scaler_y,
+    )
+
 
 def reshape_data(X_train_scaled, X_test_scaled):
     """
@@ -332,9 +344,14 @@ def reshape_data(X_train_scaled, X_test_scaled):
     Returns:
     - tuple: Reshaped training features, reshaped testing features.
     """
-    X_train_reshaped = X_train_scaled.reshape((X_train_scaled.shape[0], X_train_scaled.shape[1], 1))
-    X_test_reshaped = X_test_scaled.reshape((X_test_scaled.shape[0], X_test_scaled.shape[1], 1))
+    X_train_reshaped = X_train_scaled.reshape(
+        (X_train_scaled.shape[0], X_train_scaled.shape[1], 1)
+    )
+    X_test_reshaped = X_test_scaled.reshape(
+        (X_test_scaled.shape[0], X_test_scaled.shape[1], 1)
+    )
     return X_train_reshaped, X_test_reshaped
+
 
 def create_lstm_model(units, learning_rate, input_shape=(None, 1)):
     """
@@ -349,11 +366,14 @@ def create_lstm_model(units, learning_rate, input_shape=(None, 1)):
     model = Sequential()
     model.add(LSTM(units, input_shape=input_shape))
     model.add(Dense(1))
-    optimizer = Adam(learning_rate=learning_rate)  
-    model.compile(optimizer=optimizer, loss='mean_squared_error')
+    optimizer = Adam(learning_rate=learning_rate)
+    model.compile(optimizer=optimizer, loss="mean_squared_error")
     return model
 
-def grid_search_lstm(X_train_reshaped, y_train_scaled, X_val_reshaped, y_val_scaled, param_grid):
+
+def grid_search_lstm(
+    X_train_reshaped, y_train_scaled, X_val_reshaped, y_val_scaled, param_grid
+):
     """
     Perform grid search for LSTM hyperparameters.
 
@@ -367,12 +387,23 @@ def grid_search_lstm(X_train_reshaped, y_train_scaled, X_val_reshaped, y_val_sca
     Returns:
     - dict: Best hyperparameters and corresponding model.
     """
-    best_rmse = float('inf')
+    best_rmse = float("inf")
     best_params = {}
 
     for params in ParameterGrid(param_grid):
-        model = create_lstm_model(units=params['units'], learning_rate=params['learning_rate'], input_shape=(X_train_reshaped.shape[1], 1))
-        model.fit(X_train_reshaped, y_train_scaled, epochs=100, batch_size=32, validation_data=(X_val_reshaped, y_val_scaled), verbose=0)
+        model = create_lstm_model(
+            units=params["units"],
+            learning_rate=params["learning_rate"],
+            input_shape=(X_train_reshaped.shape[1], 1),
+        )
+        model.fit(
+            X_train_reshaped,
+            y_train_scaled,
+            epochs=100,
+            batch_size=32,
+            validation_data=(X_val_reshaped, y_val_scaled),
+            verbose=0,
+        )
 
         lstm_predictions_scaled = model.predict(X_val_reshaped)
         lstm_predictions = lstm_predictions_scaled.flatten()
@@ -384,9 +415,18 @@ def grid_search_lstm(X_train_reshaped, y_train_scaled, X_val_reshaped, y_val_sca
             best_params = params
             best_model = model
 
-    return {'best_params': best_params, 'best_model': best_model}
+    return {"best_params": best_params, "best_model": best_model}
 
-def train_lstm_model(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_scaled, best_params, epochs=100, batch_size=32):
+
+def train_lstm_model(
+    X_train_reshaped,
+    y_train_scaled,
+    X_test_reshaped,
+    y_test_scaled,
+    best_params,
+    epochs=100,
+    batch_size=32,
+):
     """
     Train LSTM model using the best hyperparameters.
 
@@ -402,10 +442,20 @@ def train_lstm_model(X_train_reshaped, y_train_scaled, X_test_reshaped, y_test_s
     Returns:
     - Sequential: Trained LSTM model.
     """
-    model = create_lstm_model(learning_rate=best_params['learning_rate'], units=best_params['units'])
-    model.fit(X_train_reshaped, y_train_scaled, epochs=epochs, batch_size=batch_size, validation_data=(X_test_reshaped, y_test_scaled), verbose=2)
+    model = create_lstm_model(
+        learning_rate=best_params["learning_rate"], units=best_params["units"]
+    )
+    model.fit(
+        X_train_reshaped,
+        y_train_scaled,
+        epochs=epochs,
+        batch_size=batch_size,
+        validation_data=(X_test_reshaped, y_test_scaled),
+        verbose=2,
+    )
 
     return model
+
 
 def get_lstm_predictions(model, X_future_reshaped, scaler_y):
     """
@@ -424,6 +474,7 @@ def get_lstm_predictions(model, X_future_reshaped, scaler_y):
 
     return lstm_predictions
 
+
 def get_lstm_predictions_2022(final_model, scaler_X, scaler_y):
     """
     Get predictions for the year 2022 using the trained LSTM model.
@@ -436,25 +487,28 @@ def get_lstm_predictions_2022(final_model, scaler_X, scaler_y):
     Returns:
     - pd.DataFrame: Monthly predictions for 2022 with the date and prediction columns.
     """
-    future_dates_2022 = pd.date_range(start='2022-01-01', end='2022-12-31', freq='D')
+    future_dates_2022 = pd.date_range(start="2022-01-01", end="2022-12-31", freq="D")
 
-    future_data_2022 = pd.DataFrame({
-        'Month': future_dates_2022.month,
-        'Year' : future_dates_2022.year,
-        'Day': future_dates_2022.day,
-        'DayOfWeek': future_dates_2022.dayofweek,
-        'NumDaysInMonth' : future_dates_2022.daysinmonth
-    })
-    
+    future_data_2022 = pd.DataFrame(
+        {
+            "Month": future_dates_2022.month,
+            "Year": future_dates_2022.year,
+            "Day": future_dates_2022.day,
+            "DayOfWeek": future_dates_2022.dayofweek,
+            "NumDaysInMonth": future_dates_2022.daysinmonth,
+        }
+    )
+
     future_data_2022_scaled = scaler_X.transform(future_data_2022)
-    
+
     future_data_2022_reshaped = future_data_2022_scaled.reshape(
         (future_data_2022_scaled.shape[0], future_data_2022_scaled.shape[1], 1)
     )
-    
-    lstm_predictions_2022_scaled = final_model.predict(future_data_2022_reshaped)
-    
-    lstm_predictions_2022 = scaler_y.inverse_transform(lstm_predictions_2022_scaled).flatten()
-    
-    return pd.Series(lstm_predictions_2022, index=future_dates_2022)
 
+    lstm_predictions_2022_scaled = final_model.predict(future_data_2022_reshaped)
+
+    lstm_predictions_2022 = scaler_y.inverse_transform(
+        lstm_predictions_2022_scaled
+    ).flatten()
+
+    return pd.Series(lstm_predictions_2022, index=future_dates_2022)

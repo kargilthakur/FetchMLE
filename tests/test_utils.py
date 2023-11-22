@@ -1,91 +1,83 @@
+import unittest
 import pandas as pd
 import numpy as np
-import unittest
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
-from statsmodels.regression.linear_model import OLS
-from sklearn.ensemble import RandomForestRegressor
-from statsmodels.tsa.statespace.sarimax import SARIMAX
-from prophet import Prophet
+from datetime import datetime
+from sklearn.preprocessing import MinMaxScaler
 
 from utils import (
     load_data,
     preprocess_date,
-    split_data,
     scale_data,
-    evaluate_predictions,
-    train_linear_regression_ols,
-    train_random_forest,
-    train_sarima,
-    fit_prophet,
-    get_prophet_predictions,
+    split_data_by_date,
+    reshape_data,
 )
 
 class TestUtils(unittest.TestCase):
     def setUp(self):
         # Load example data for testing
-        file_path = 'path_to_your_data.csv'
+        file_path = "data/data_daily.csv"
         self.df = load_data(file_path)
-        self.df = preprocess_date(self.df)
 
-    def test_split_data(self):
-        """Test the split_data function."""
-        train, test = split_data(self.df)
-        self.assertEqual(len(train) + len(test), len(self.df))
-        self.assertIsInstance(train, pd.DataFrame)
-        self.assertIsInstance(test, pd.DataFrame)
+    def test_load_data(self):
+        # Test the load_data function
+        file_path = "path/to/your/file.csv"
+        df = load_data(file_path)
+        self.assertIsInstance(df, pd.DataFrame)
+        self.assertTrue("# Date" in df.columns)
+
+    def test_preprocess_date(self):
+        # Test the preprocess_date function
+        df = pd.DataFrame(
+            {"# Date": pd.date_range(start="2022-01-01", periods=5, freq="D")}
+        )
+        processed_df = preprocess_date(df)
+        self.assertIsInstance(processed_df, pd.DataFrame)
+        self.assertTrue("Month" in processed_df.columns)
+        self.assertTrue("Year" in processed_df.columns)
+        self.assertTrue("Day" in processed_df.columns)
+
+    def test_split_data_by_date(self):
+        # Test the split_data_by_date function
+        df = pd.DataFrame(
+            {
+                "# Date": pd.date_range(start="2022-01-01", periods=10, freq="D"),
+                "Receipt_Count": np.arange(10),
+            }
+        )
+        X_train, X_test, y_train, y_test = split_data_by_date(
+            df, target_column="# Date", test_start_date="2022-01-06"
+        )
+        self.assertIsInstance(X_train, pd.DataFrame)
+        self.assertIsInstance(X_test, pd.DataFrame)
+        self.assertIsInstance(y_train, pd.Series)
+        self.assertIsInstance(y_test, pd.Series)
 
     def test_scale_data(self):
-        """Test the scale_data function."""
-        column_name = 'Receipt_Count'
-        scaled_df, scaler = scale_data(self.df, column_name)
-        self.assertIn(column_name, scaled_df.columns)
-        self.assertIsInstance(scaler, MinMaxScaler)
-
-    def test_evaluate_predictions(self):
-        """Test the evaluate_predictions function."""
-        actual = np.array([1, 2, 3, 4, 5])
-        predicted = np.array([1.1, 2.2, 3.3, 4.4, 5.5])
-        rmse, mae, r2 = evaluate_predictions(actual, predicted)
-        self.assertIsInstance(rmse, float)
-        self.assertIsInstance(mae, float)
-        self.assertIsInstance(r2, float)
-
-    def test_train_linear_regression_ols(self):
-        """Test the train_linear_regression_ols function."""
-        X_train, X_test, y_train, y_test = train_test_split(
-            self.df[['Month', 'Day', 'DayOfWeek']], self.df['Receipt_Count'], test_size=0.2, random_state=42
+        # Test the scale_data function
+        X_train = pd.DataFrame({"Feature1": np.arange(5), "Feature2": np.arange(5, 10)})
+        X_test = pd.DataFrame(
+            {"Feature1": np.arange(10, 15), "Feature2": np.arange(15, 20)}
         )
-        model = train_linear_regression_ols(X_train, y_train)
-        self.assertIsInstance(model, OLS)
-
-    def test_train_random_forest(self):
-        """Test the train_random_forest function."""
-        X_train, X_test, y_train, y_test = train_test_split(
-            self.df[['Month', 'Day', 'DayOfWeek']], self.df['Receipt_Count'], test_size=0.2, random_state=42
+        y_train = pd.Series(np.arange(5))
+        y_test = pd.Series(np.arange(5, 10))
+        X_train_scaled, X_test_scaled, y_train_scaled, y_test_scaled, _, _ = scale_data(
+            X_train, X_test, y_train, y_test
         )
-        model = train_random_forest(X_train, y_train, use_hyperparameter_tuning=False)
-        self.assertIsInstance(model, RandomForestRegressor)
+        self.assertIsInstance(X_train_scaled, np.ndarray)
+        self.assertIsInstance(X_test_scaled, np.ndarray)
+        self.assertIsInstance(y_train_scaled, np.ndarray)
+        self.assertIsInstance(y_test_scaled, np.ndarray)
 
-    def test_train_sarima(self):
-        """Test the train_sarima function."""
-        X_train, X_test, y_train, y_test = train_test_split(
-            self.df[['Month', 'Day', 'DayOfWeek']], self.df['Receipt_Count'], test_size=0.2, random_state=42
-        )
-        model = train_sarima(X_train, y_train)
-        self.assertIsInstance(model, SARIMAX)
+    def test_reshape_data(self):
+        # Test the reshape_data function
+        X_train_scaled = np.random.rand(5, 2)
+        X_test_scaled = np.random.rand(2, 2)
+        X_train_reshaped, X_test_reshaped = reshape_data(X_train_scaled, X_test_scaled)
+        self.assertIsInstance(X_train_reshaped, np.ndarray)
+        self.assertIsInstance(X_test_reshaped, np.ndarray)
+        self.assertEqual(X_train_reshaped.shape[2], 1)
+        self.assertEqual(X_test_reshaped.shape[2], 1)
 
-    def test_fit_prophet(self):
-        """Test the fit_prophet function."""
-        model = fit_prophet(self.df)
-        self.assertIsInstance(model, Prophet)
 
-    def test_get_prophet_predictions(self):
-        """Test the get_prophet_predictions function."""
-        model = fit_prophet(self.df)
-        time_frame = 10
-        predictions = get_prophet_predictions(model, time_frame)
-        self.assertIsInstance(predictions, pd.Series)
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

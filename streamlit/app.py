@@ -14,29 +14,29 @@ st.header("Explore and visualize the receipt count predictions.")
 
 # Model selection
 model = st.selectbox(
-    'Which model predictions do you want to see?',
-    ('LSTM', 'Linear Regression', 'Prophet')  # LSTM is now the first option
+    "Which model predictions do you want to see?",
+    ("LSTM", "Linear Regression", "Prophet"),  # LSTM is now the first option
 )
 
 # Load the corresponding CSV file
-if model == 'Linear Regression':
-    csv_path = 'data/lr_predictions.csv'
-elif model == 'LSTM':
-    csv_path = 'data/lstm_predictions.csv'
+if model == "Linear Regression":
+    csv_path = "data/lr_predictions.csv"
+elif model == "LSTM":
+    csv_path = "data/lstm_predictions.csv"
 else:
-    csv_path = 'data/lstm_predictions.csv'
+    csv_path = "data/lstm_predictions.csv"
 
 df = pd.read_csv(csv_path, parse_dates=True, index_col=0)
 
 # Rename the column
-df.rename(columns={'0': 'Predicted'}, inplace=True)
+df.rename(columns={"0": "Predicted"}, inplace=True)
 
 # Group by month and sum
-df_monthly = df.resample('M').sum()
+df_monthly = df.resample("M").sum()
 
 # Generate button
-if st.button('Generate'):
-    # Display the sample data
+if st.button("Generate"):
+    # Display the  data
     st.subheader("Receipt counts:")
     st.dataframe(df_monthly)
 
