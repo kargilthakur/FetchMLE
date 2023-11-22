@@ -8,8 +8,14 @@ The provided dataset contains the observed number of scanned receipts each day t
 
 ## Inference Deployment
 
-The inference process is deployed on Hugging Face, which provides a convenient platform for interaction. You can access the inference platform here -https://huggingface.co/spaces/kargil8320/MLE 
+The inference process is deployed on Hugging Face, which provides a convenient platform for interaction. You can access the inference platform here -
+
+https://huggingface.co/spaces/kargil8320/MLE 
+
 Note that due to resource limitations on the free Hugging Face platform, the deployed app pauses every 48 hours. If you encounter any issues, consider restarting it.
+
+App screenshots - 
+
 
 For a more robust inference experience, you can pull the Docker image from the following repository:
 
