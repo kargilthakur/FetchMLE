@@ -16,4 +16,4 @@ RUN /bin/bash -c "source venv/bin/activate"
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Run unit tests, then run the main script, and finally run the Streamlit app
-CMD ["/bin/bash", "-c", "python -m unittest discover tests && python main.py && streamlit run streamlit/app.py"]
+CMD ["/bin/bash", "-c", "python main.py && python -m unittest discover tests && streamlit run streamlit/app.py"]

@@ -4,7 +4,7 @@ import numpy as np
 from datetime import datetime
 from sklearn.preprocessing import MinMaxScaler
 
-from utils import (
+from src.utils import (
     load_data,
     preprocess_date,
     scale_data,
@@ -20,7 +20,7 @@ class TestUtils(unittest.TestCase):
 
     def test_load_data(self):
         # Test the load_data function
-        file_path = "path/to/your/file.csv"
+        file_path = "data/data_daily.csv"
         df = load_data(file_path)
         self.assertIsInstance(df, pd.DataFrame)
         self.assertTrue("# Date" in df.columns)
