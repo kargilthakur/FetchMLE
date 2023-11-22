@@ -1,14 +1,19 @@
 # Use an official Python runtime as a parent image
-FROM python:3.8-slim
+FROM python:3.10-slim
 
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy the current directory contents into the container at /app
-COPY . /app
+# Clone the repository
+RUN apt-get update && apt-get install -y git
+RUN git clone https://github.com/kargilthakur/FetchMLE .
+
+# Create and activate a virtual environment
+RUN python -m venv venv
+RUN /bin/bash -c "source venv/bin/activate"
 
 # Install any needed packages specified in requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Run unit tests, then run the main script, and finally run the Streamlit app
-CMD ["sh", "-c", "python -m unittest discover tests && python main.py && streamlit run streamlit/app.py"]
+CMD ["/bin/bash", "-c", "python -m unittest discover tests && python main.py && streamlit run streamlit/app.py"]
