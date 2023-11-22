@@ -15,8 +15,8 @@ https://huggingface.co/spaces/kargil8320/MLE
 Note that due to resource limitations on the free Hugging Face platform, the deployed app pauses every 48 hours. If you encounter any issues, consider restarting it.
 
 App screenshots - 
-![Receipt Count Table](ss2.png)
-![Receipt Count Plot](ss1.png)
+![Receipt Count Table](images/ss2.png)
+![Receipt Count Plot](images/ss1.png)
 
 
 
