@@ -12,6 +12,7 @@ from src.utils import (
     reshape_data,
 )
 
+
 class TestUtils(unittest.TestCase):
     def setUp(self):
         # Load example data for testing
