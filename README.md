@@ -26,6 +26,17 @@ For a more robust inference experience, you can pull the Docker image from the f
 docker pull tkargil0/receiptpredictor:latest
 ```
 
+After Downloading you can run the docker using this command - 
+
+```bash
+docker run -p 8502:8502 tkargil0/receiptpredictor:latest
+```
+
+If port 8502 is in use then you can change the port number - 
+
+docker run -p 8502:[your_port_number] tkargil0/receiptpredictor:latest
+
+
 This Docker image includes the complete pipeline, including model training, prediction generation, and a Streamlit app for visualization.
 
 ## Modelling Approach
